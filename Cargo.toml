@@ -10,3 +10,4 @@ chrono = "0.4.19"
 iced = { git = "https://github.com/iced-rs/iced.git", features=["canvas"]}
 iced_native ={git = "https://github.com/iced-rs/iced.git" }
 iced_lazy ={git = "https://github.com/iced-rs/iced.git" }
+plotters = "0.3.2"
