@@ -95,9 +95,11 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "iced",
+ "iced_futures",
  "iced_lazy",
  "iced_native",
  "plotters",
+ "plotters-iced",
 ]
 
 [[package]]
@@ -950,8 +952,9 @@ checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
 
 [[package]]
 name = "iced"
-version = "0.3.0"
-source = "git+https://github.com/iced-rs/iced.git#a33e320521fa0f08704bcea541ca337d0f45449e"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6025abe6b1056c9b5adad79c484c5fd8b7012e5230f3b0439a1294ade7ded7bf"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -964,8 +967,9 @@ dependencies = [
 
 [[package]]
 name = "iced_core"
-version = "0.4.0"
-source = "git+https://github.com/iced-rs/iced.git#a33e320521fa0f08704bcea541ca337d0f45449e"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ccf9133ceb345ec640047d5597fb8aa88e9cf74ce2d0277a9a62e2d6ed4a8148"
 dependencies = [
  "bitflags",
  "wasm-timer",
@@ -973,19 +977,22 @@ dependencies = [
 
 [[package]]
 name = "iced_futures"
-version = "0.3.0"
-source = "git+https://github.com/iced-rs/iced.git#a33e320521fa0f08704bcea541ca337d0f45449e"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13d13241d5ed32846bbcffaf60e27e7ceebb60cf16d791ff00d582f0d4d1b07b"
 dependencies = [
  "futures",
  "log",
+ "tokio",
  "wasm-bindgen-futures",
  "wasm-timer",
 ]
 
 [[package]]
 name = "iced_graphics"
-version = "0.2.0"
-source = "git+https://github.com/iced-rs/iced.git#a33e320521fa0f08704bcea541ca337d0f45449e"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2adcf703fc326e0985ea99c75f1b73e718560a7b220d57ec6478417ccb2f463f"
 dependencies = [
  "bytemuck",
  "glam",
@@ -998,8 +1005,9 @@ dependencies = [
 
 [[package]]
 name = "iced_lazy"
-version = "0.1.0"
-source = "git+https://github.com/iced-rs/iced.git#a33e320521fa0f08704bcea541ca337d0f45449e"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "333979d705964832864ee7676516ab3c3df4ab0b65efb603c86a256d4adbec6f"
 dependencies = [
  "iced_native",
  "ouroboros",
@@ -1007,8 +1015,9 @@ dependencies = [
 
 [[package]]
 name = "iced_native"
-version = "0.4.0"
-source = "git+https://github.com/iced-rs/iced.git#a33e320521fa0f08704bcea541ca337d0f45449e"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ca174d4693a5daa2ffcae38d5c28cf0dbd54bd8fc19848f28392cd52624751a"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -1020,16 +1029,18 @@ dependencies = [
 
 [[package]]
 name = "iced_style"
-version = "0.3.0"
-source = "git+https://github.com/iced-rs/iced.git#a33e320521fa0f08704bcea541ca337d0f45449e"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a90028c94ab62c13cd3b6fb1499a593a51510d4729c5b4e8e60705b2b28c6bc2"
 dependencies = [
  "iced_core",
 ]
 
 [[package]]
 name = "iced_wgpu"
-version = "0.4.0"
-source = "git+https://github.com/iced-rs/iced.git#a33e320521fa0f08704bcea541ca337d0f45449e"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8bc44ca209f77bd855f035d2e86e50e66332f55fb60d9fb67eeb09eae9d9de2e"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -1047,8 +1058,9 @@ dependencies = [
 
 [[package]]
 name = "iced_winit"
-version = "0.3.0"
-source = "git+https://github.com/iced-rs/iced.git#a33e320521fa0f08704bcea541ca337d0f45449e"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72011b895e439e2ebad8f545720e3e97c7368ecfc47a23cbfeaa9508a98af90c"
 dependencies = [
  "iced_futures",
  "iced_graphics",
@@ -1717,6 +1729,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "plotters-iced"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a824740fd75e62a6c64e92fab3343e09615d20db25371299aecdf99ba7c391cf"
+dependencies = [
+ "cc",
+ "iced_graphics",
+ "iced_native",
+ "libc",
+ "num-traits",
+ "plotters",
+ "plotters-backend",
+]
+
+[[package]]
 name = "plotters-svg"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2114,6 +2141,18 @@ dependencies = [
  "libc",
  "wasi 0.10.0+wasi-snapshot-preview1",
  "winapi",
+]
+
+[[package]]
+name = "tokio"
+version = "1.20.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a8325f63a7d4774dd041e363b2409ed1c5cbbd0f867795e661df066b2b0a581"
+dependencies = [
+ "autocfg",
+ "num_cpus",
+ "once_cell",
+ "pin-project-lite",
 ]
 
 [[package]]
@@ -2524,8 +2563,9 @@ dependencies = [
 
 [[package]]
 name = "winit"
-version = "0.26.0"
-source = "git+https://github.com/iced-rs/winit?rev=02a12380960cec2f351c09a33d6a7cc2789d96a6#02a12380960cec2f351c09a33d6a7cc2789d96a6"
+version = "0.26.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b43cc931d58b99461188607efd7acb2a093e65fc621f54cad78517a6063e73a"
 dependencies = [
  "bitflags",
  "cocoa",

@@ -1,151 +1,161 @@
-use std::collections::HashMap;
-use std::fs;
-use std::io::Read;
+use std::{collections::HashMap, time::Duration};
 
-use chrono::{Duration, Local};
-use chrono::{TimeZone, Utc};
-// use iced::canvas::{Cursor, Frame, Geometry, Path, Program};
-// use iced::{button, Button, Color, Column, Rectangle, Sandbox, Settings, Text};
+use chrono::{Local, TimeZone};
+use iced::{
+    canvas::Cache, executor, Application, Column, Command, Container, Element, Length, Settings,
+    Subscription, Text,
+};
+
 use plotters::prelude::*;
-fn main() {
-    let mut db: HashMap<i64, (f64, String)> = HashMap::new();
-    ["1.dat", "2.dat", "3.dat", "4.dat", "5.dat"]
-        .iter()
-        .map(|fname| {
-            let mut f = fs::File::open(format!("data/{}", fname)).expect("error opening file");
-            let mut content = String::new();
+use plotters_iced::{Chart, ChartWidget};
+mod power;
 
-            f.read_to_string(&mut content).unwrap();
-            content
-                .split('\n')
-                .collect::<Vec<&str>>()
-                .iter()
-                .map(|line| {
-                    // println!("line: {}", line);
-                    let splitted_line = line.split('\t').collect::<Vec<&str>>();
-                    if splitted_line.len() == 3 {
-                        let timestamp: i64 = splitted_line[0].parse().unwrap();
-                        let percentage: f64 = splitted_line[1].parse().unwrap();
-                        db.insert(timestamp, (percentage, splitted_line[2].to_string()));
-                    } else {
-                        // eprintln!("not 3: {}", splitted_line.len());
-                    }
-                })
-                .for_each(drop);
-        })
-        .for_each(drop);
-
-    println!(
-        "Hello, world! {}",
-        Local.timestamp(*db.keys().max().unwrap(), 0)
-    );
-
-    let min = *db.keys().min().unwrap();
-    let max = *db.keys().max().unwrap();
-    let duration = max - min;
-
-    let root_drawing_area = BitMapBackend::new("images/1.png", (800, 800)).into_drawing_area();
-
-    let min_date = Local.timestamp(min, 0);
-    let max_date = Local.timestamp(max, 0);
-
-    root_drawing_area.fill(&WHITE).unwrap();
-
-    let mut chart = ChartBuilder::on(&root_drawing_area)
-        .set_label_area_size(LabelAreaPosition::Left, 40)
-        .set_label_area_size(LabelAreaPosition::Bottom, 40)
-        .caption("Charge/Discharge Graph", ("sans-serif", 40))
-        .build_cartesian_2d(min_date..max_date, 0..100)
-        .unwrap();
-
-    chart.configure_mesh().draw().unwrap();
-
-    chart
-        .draw_series(db.iter().map(|(k, v)| {
-            // let x = Local.timestamp(*k, 0);
-            // let x0 = SegmentValue::Exact(x);
-            // let x1 = SegmentValue::Exact(x.clone() + Duration::minutes(1));
-            // let mut bar = Rectangle::new(
-            //     [(x0, 0), (x1, v.0 as i32)],
-            //     if v.1 == "charging" { &BLUE } else { &RED },
-            // );
-            // // bar.set_margin(0, 0, 5, 5);
-            // bar
-            Circle::new(
-                // (*k - min) as f64 / duration as f64, v.0 as i32),
-                (Local.timestamp(*k, 0), v.0 as i32),
-                5,
-                if v.1 == "charging" { &BLUE } else { &RED },
-            )
-        }))
-        .unwrap();
-    // App::run(Settings::default()).unwrap();
-    // // let mut output = fs::OpenOptions::new()
-    // //     .create(true)
-    // //     .write(true)
-    // //     .open("output.csv")
-    // //     .unwrap();
-    // // for a in db {
-    // //     output
-    // //         .write(format!("{}, {}, {}\n", a.0, a.1 .0, a.1 .1).as_bytes())
-    // //         .unwrap();
-    // // }
+struct State {
+    chart: BatteryChart,
 }
 
-// // First, we define the data we need for drawing
-// #[derive(Debug)]
-// struct Circle {
-//     radius: f32,
-// }
+#[derive(Debug)]
+enum Message {
+    Tick,
+}
 
-// // Then, we implement the `Program` trait
-// impl Program<()> for Circle {
-//     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
-//         // We prepare a new `Frame`
-//         let mut frame = Frame::new(bounds.size());
+impl Application for State {
+    type Executor = executor::Default;
 
-//         // We create a `Path` representing a simple circle
-//         let circle = Path::circle(frame.center(), self.radius);
+    type Message = self::Message;
 
-//         // And fill it with some color
-//         frame.fill(&circle, Color::BLACK);
+    type Flags = ();
 
-//         // Finally, we produce the geometry
-//         vec![frame.into_geometry()]
-//     }
-// }
+    fn new(_flags: Self::Flags) -> (Self, iced::Command<Self::Message>) {
+        (
+            Self {
+                chart: Default::default(),
+            },
+            Command::none(),
+        )
+    }
 
-// #[derive(Default)]
-// struct App {
-//     exit: button::State,
-// }
+    fn title(&self) -> String {
+        "Battery Stats".to_owned()
+    }
 
-// #[derive(Debug, Clone)]
-// enum Message {
-//     Exit,
-// }
+    fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
+        match message {
+            Message::Tick => self.chart.update(),
+        }
+        Command::none()
+    }
 
-// impl Sandbox for App {
-//     type Message = Message;
+    fn view(&mut self) -> iced::Element<'_, Self::Message> {
+        let content = Column::new()
+            .push(Text::new("Iced test chart").size(20))
+            .push(self.chart.view());
+        Container::new(content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
+    }
 
-//     fn new() -> Self {
-//         App::default()
-//     }
+    fn subscription(&self) -> Subscription<Self::Message> {
+        iced::time::every(Duration::from_secs(1)).map(|_| Message::Tick)
+    }
+}
 
-//     fn title(&self) -> String {
-//         "Battery stats".to_string()
-//     }
+struct BatteryChart {
+    counter: i32,
+    should_update: bool,
+    all_time_chart: AllTimeChart,
+}
 
-//     fn update(&mut self, _message: Self::Message) {
-//         todo!()
-//     }
+impl Default for BatteryChart {
+    fn default() -> Self {
+        Self {
+            counter: 0,
+            should_update: true,
+            all_time_chart: AllTimeChart::default(),
+        }
+    }
+}
 
-//     fn view(&mut self) -> iced::Element<'_, Self::Message> {
-//         Column::new()
-//             .push(Text::new("hello"))
-//             .push(Button::new(&mut self.exit, Text::new("Exit")))
-//             .into()
-//     }
-// }
+impl BatteryChart {
+    fn update(&mut self) {
+        self.counter += 1;
+    }
 
-// // Finally, we simply use our `Circle` to create the `Canvas`!
+    fn view(&mut self) -> Element<Message> {
+        if self.should_update {
+            self.all_time_chart = AllTimeChart::new(power::create_chart());
+            self.should_update = false;
+        }
+        Column::new()
+            .push(Text::new(format!("{}", self.counter)))
+            .push(self.all_time_chart.view())
+            .into()
+    }
+}
+
+#[derive(Default)]
+struct AllTimeChart {
+    cache: Cache,
+    db: HashMap<i64, (f64, String)>,
+}
+
+impl AllTimeChart {
+    fn new(db: HashMap<i64, (f64, String)>) -> Self {
+        Self {
+            cache: Cache::new(),
+            db,
+        }
+    }
+
+    fn view(&mut self) -> Element<Message> {
+        Container::new(
+            Column::new()
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .push(ChartWidget::new(self).height(Length::Fill)),
+        )
+        .into()
+    }
+}
+
+impl Chart<Message> for AllTimeChart {
+    fn build_chart<DB: plotters_iced::DrawingBackend>(
+        &self,
+        mut builder: plotters_iced::ChartBuilder<DB>,
+    ) {
+        let min = self.db.keys().min().unwrap();
+        let max = self.db.keys().max().unwrap();
+        let duration = max - min;
+
+        let min_date = Local.timestamp(*min, 0);
+        let max_date = Local.timestamp(*max, 0);
+
+        let mut chart = builder
+            .set_label_area_size(LabelAreaPosition::Left, 40)
+            .set_label_area_size(LabelAreaPosition::Bottom, 40)
+            .caption("Charge/Discharge Graph", ("sans-serif", 40))
+            .build_cartesian_2d(min_date..max_date, 0..100)
+            .unwrap();
+
+        chart.configure_mesh().draw().unwrap();
+
+        chart
+            .draw_series(self.db.iter().map(|(k, v)| {
+                Circle::new(
+                    (Local.timestamp(*k, 0), v.0 as i32),
+                    5,
+                    if v.1 == "charging" { &BLUE } else { &RED },
+                )
+            }))
+            .unwrap();
+    }
+}
+
+fn main() {
+    State::run(Settings {
+        antialiasing: true,
+        ..Settings::default()
+    })
+    .unwrap();
+}
