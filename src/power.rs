@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs, io::Read};
 use chrono::{Local, TimeZone};
 use plotters::prelude::*;
 
-pub fn create_chart() -> HashMap<i64, (f64, String)> {
+pub fn create_chart() -> Vec<(i64, (f64, String))> {
     let mut db: HashMap<i64, (f64, String)> = HashMap::new();
     ["1.dat", "2.dat", "3.dat", "4.dat", "5.dat"]
         .iter()
@@ -36,5 +36,8 @@ pub fn create_chart() -> HashMap<i64, (f64, String)> {
         Local.timestamp(*db.keys().max().unwrap(), 0)
     );
 
-    db
+    let mut dbvec: Vec<(i64, (f64, String))> = db.into_iter().collect();
+
+    dbvec.sort_by(|a, b| a.0.cmp(&b.0));
+    dbvec
 }

@@ -2,24 +2,26 @@ use std::{collections::HashMap, time::Duration};
 
 use chrono::{Local, TimeZone};
 use iced::{
-    canvas::Cache, executor, Application, Column, Command, Container, Element, Length, Settings,
-    Subscription, Text,
+    canvas::Cache, executor, Application, Button, Column, Command, Container, Element, Length, Row,
+    Scrollable, Settings, Space, Subscription, Text,
 };
 
 use plotters::prelude::*;
 use plotters_iced::{Chart, ChartWidget};
 mod power;
 
-struct State {
-    chart: BatteryChart,
+struct BatteryStatApp {
+    chart: BatteryChartComponents,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum Message {
     Tick,
+    NextDay,
+    PreviousDay,
 }
 
-impl Application for State {
+impl Application for BatteryStatApp {
     type Executor = executor::Default;
 
     type Message = self::Message;
@@ -40,19 +42,24 @@ impl Application for State {
     }
 
     fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
-        match message {
-            Message::Tick => self.chart.update(),
-        }
+        self.chart.update(message);
         Command::none()
     }
 
     fn view(&mut self) -> iced::Element<'_, Self::Message> {
         let content = Column::new()
+            .spacing(20)
+            .align_items(iced::Alignment::Start)
+            .width(Length::Fill)
+            .height(Length::Fill)
             .push(Text::new("Iced test chart").size(20))
             .push(self.chart.view());
         Container::new(content)
             .width(Length::Fill)
             .height(Length::Fill)
+            .padding(5)
+            .center_x()
+            .center_y()
             .into()
     }
 
@@ -61,50 +68,95 @@ impl Application for State {
     }
 }
 
-struct BatteryChart {
+struct BatteryChartComponents {
     counter: i32,
     should_update: bool,
-    all_time_chart: AllTimeChart,
+    initialized: bool,
+    battery_chart: BatteryChart,
+    next_state: iced::button::State,
+    prev_state: iced::button::State,
+    scroll_state: iced::scrollable::State,
 }
 
-impl Default for BatteryChart {
+impl Default for BatteryChartComponents {
     fn default() -> Self {
         Self {
             counter: 0,
             should_update: true,
-            all_time_chart: AllTimeChart::default(),
+            initialized: false,
+            battery_chart: Default::default(),
+            next_state: Default::default(),
+            prev_state: Default::default(),
+            scroll_state: Default::default(),
         }
     }
 }
 
-impl BatteryChart {
-    fn update(&mut self) {
+impl BatteryChartComponents {
+    fn update(&mut self, msg: Message) {
         self.counter += 1;
+        match msg {
+            Message::NextDay => {
+                println!("update::next");
+                self.battery_chart.next();
+                self.should_update = true;
+            }
+            Message::PreviousDay => {
+                println!("update::prev");
+                self.battery_chart.prev();
+                self.should_update = true;
+            }
+            _ => {}
+        }
     }
 
     fn view(&mut self) -> Element<Message> {
+        if !self.initialized {
+            self.battery_chart = BatteryChart::new(power::create_chart());
+            self.initialized = true;
+        }
+
         if self.should_update {
-            self.all_time_chart = AllTimeChart::new(power::create_chart());
             self.should_update = false;
         }
-        Column::new()
-            .push(Text::new(format!("{}", self.counter)))
-            .push(self.all_time_chart.view())
-            .into()
+        let mut scroll = Scrollable::new(&mut self.scroll_state)
+            .width(Length::Fill)
+            .height(Length::Fill);
+
+        let col = Column::new()
+            .push(Text::new(format!("{}", self.counter)).height(Length::Units(40)))
+            .push(self.battery_chart.view())
+            .push(
+                Row::new()
+                    .push(
+                        Button::new(&mut self.prev_state, Text::new("Previous"))
+                            .on_press(Message::PreviousDay),
+                    )
+                    .push(
+                        Button::new(&mut self.next_state, Text::new("Next"))
+                            .on_press(Message::NextDay),
+                    )
+                    .height(Length::Units(40)),
+            );
+        scroll = scroll.push(col);
+        scroll.into()
     }
 }
 
 #[derive(Default)]
-struct AllTimeChart {
+struct BatteryChart {
     cache: Cache,
-    db: HashMap<i64, (f64, String)>,
+    db: Vec<(i64, (f64, String))>,
+    start_day: i64,
 }
 
-impl AllTimeChart {
-    fn new(db: HashMap<i64, (f64, String)>) -> Self {
+impl BatteryChart {
+    fn new(db: Vec<(i64, (f64, String))>) -> Self {
+        let start_day = db[0].0;
         Self {
             cache: Cache::new(),
             db,
+            start_day,
         }
     }
 
@@ -112,24 +164,47 @@ impl AllTimeChart {
         Container::new(
             Column::new()
                 .width(Length::Fill)
-                .height(Length::Fill)
+                .height(Length::Shrink)
                 .push(ChartWidget::new(self).height(Length::Fill)),
         )
+        .height(Length::Units(200))
         .into()
+    }
+
+    fn next(&mut self) {
+        self.start_day += 24 * 60 * 60;
+        if self.start_day > self.db.last().unwrap().0 {
+            self.start_day = self.db.last().unwrap().0 - 24 * 60 * 60;
+        }
+        self.cache.clear();
+        println!("Next: {}", self.start_day);
+    }
+
+    fn prev(&mut self) {
+        self.start_day -= 24 * 60 * 60;
+        if self.start_day < self.db[0].0 {
+            self.start_day = self.db[0].0;
+        }
+        self.cache.clear();
+        println!("Prev: {}", self.start_day);
     }
 }
 
-impl Chart<Message> for AllTimeChart {
+impl Chart<Message> for BatteryChart {
     fn build_chart<DB: plotters_iced::DrawingBackend>(
         &self,
         mut builder: plotters_iced::ChartBuilder<DB>,
     ) {
-        let min = self.db.keys().min().unwrap();
-        let max = self.db.keys().max().unwrap();
-        let duration = max - min;
+        // let min = self.db.keys().min().unwrap();
+        let max = self.db.last().unwrap().0;
+        let mut end_day = self.start_day + 24 * 60 * 60;
+        if end_day > max {
+            end_day = max;
+        }
+        // let duration = max - min;
 
-        let min_date = Local.timestamp(*min, 0);
-        let max_date = Local.timestamp(*max, 0);
+        let min_date = Local.timestamp(self.start_day, 0);
+        let max_date = Local.timestamp(end_day, 0);
 
         let mut chart = builder
             .set_label_area_size(LabelAreaPosition::Left, 40)
@@ -141,19 +216,50 @@ impl Chart<Message> for AllTimeChart {
         chart.configure_mesh().draw().unwrap();
 
         chart
-            .draw_series(self.db.iter().map(|(k, v)| {
-                Circle::new(
-                    (Local.timestamp(*k, 0), v.0 as i32),
-                    5,
-                    if v.1 == "charging" { &BLUE } else { &RED },
-                )
-            }))
+            .draw_series(
+                self.db
+                    .iter()
+                    .filter(|x| x.0 > self.start_day && x.0 < end_day)
+                    .map(|(k, v)| {
+                        Circle::new(
+                            (Local.timestamp(*k, 0), v.0 as i32),
+                            5,
+                            if v.1 == "charging" { &BLUE } else { &RED },
+                        )
+                    }),
+            )
             .unwrap();
+
+        // chart
+        //     .draw_series(self.db.iter().map(|(k, v)| {
+        //         Circle::new(
+        //             (Local.timestamp(*k, 0), v.0 as i32),
+        //             5,
+        //             if v.1 == "charging" { &BLUE } else { &RED },
+        //         )
+        //     }))
+        //     .unwrap();
+    }
+
+    fn draw_chart<DB: DrawingBackend>(&self, root: DrawingArea<DB, plotters::coord::Shift>) {
+        let builder = ChartBuilder::on(&root);
+        self.build_chart(builder);
+    }
+
+    fn draw<F: Fn(&mut iced::canvas::Frame)>(
+        &self,
+        size: iced::Size,
+        f: F,
+    ) -> iced::canvas::Geometry {
+        // let mut frame = iced::canvas::Frame::new(size);
+        // f(&mut frame);
+        // frame.into_geometry()
+        self.cache.draw(size, f)
     }
 }
 
 fn main() {
-    State::run(Settings {
+    BatteryStatApp::run(Settings {
         antialiasing: true,
         ..Settings::default()
     })
