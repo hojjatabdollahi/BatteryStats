@@ -1,9 +1,7 @@
-use std::{collections::HashMap, time::Duration};
-
 use chrono::{Local, TimeZone};
 use iced::{
     canvas::Cache, executor, Application, Button, Column, Command, Container, Element, Length, Row,
-    Scrollable, Settings, Space, Subscription, Text,
+    Scrollable, Settings, Space, Text,
 };
 
 use plotters::prelude::*;
@@ -16,7 +14,6 @@ struct BatteryStatApp {
 
 #[derive(Debug, Clone, Copy)]
 enum Message {
-    Tick,
     NextDay,
     PreviousDay,
 }
@@ -52,7 +49,6 @@ impl Application for BatteryStatApp {
             .align_items(iced::Alignment::Start)
             .width(Length::Fill)
             .height(Length::Fill)
-            .push(Text::new("Iced test chart").size(20))
             .push(self.chart.view());
         Container::new(content)
             .width(Length::Fill)
@@ -62,14 +58,9 @@ impl Application for BatteryStatApp {
             .center_y()
             .into()
     }
-
-    fn subscription(&self) -> Subscription<Self::Message> {
-        iced::time::every(Duration::from_secs(1)).map(|_| Message::Tick)
-    }
 }
 
 struct BatteryChartComponents {
-    counter: i32,
     should_update: bool,
     initialized: bool,
     battery_chart: BatteryChart,
@@ -81,7 +72,6 @@ struct BatteryChartComponents {
 impl Default for BatteryChartComponents {
     fn default() -> Self {
         Self {
-            counter: 0,
             should_update: true,
             initialized: false,
             battery_chart: Default::default(),
@@ -94,7 +84,6 @@ impl Default for BatteryChartComponents {
 
 impl BatteryChartComponents {
     fn update(&mut self, msg: Message) {
-        self.counter += 1;
         match msg {
             Message::NextDay => {
                 println!("update::next");
@@ -106,7 +95,6 @@ impl BatteryChartComponents {
                 self.battery_chart.prev();
                 self.should_update = true;
             }
-            _ => {}
         }
     }
 
@@ -123,21 +111,31 @@ impl BatteryChartComponents {
             .width(Length::Fill)
             .height(Length::Fill);
 
-        let col = Column::new()
-            .push(Text::new(format!("{}", self.counter)).height(Length::Units(40)))
-            .push(self.battery_chart.view())
-            .push(
-                Row::new()
-                    .push(
-                        Button::new(&mut self.prev_state, Text::new("Previous"))
-                            .on_press(Message::PreviousDay),
+        let col = Column::new().push(self.battery_chart.view()).push(
+            Row::new()
+                .push(
+                    Button::new(
+                        &mut self.prev_state,
+                        Text::new("Previous")
+                            .width(Length::Fill)
+                            .horizontal_alignment(iced::alignment::Horizontal::Center),
                     )
-                    .push(
-                        Button::new(&mut self.next_state, Text::new("Next"))
-                            .on_press(Message::NextDay),
+                    .width(Length::Units(100))
+                    .on_press(Message::PreviousDay),
+                )
+                .push(Space::new(Length::Fill, Length::Fill))
+                .push(
+                    Button::new(
+                        &mut self.next_state,
+                        Text::new("Next")
+                            .width(Length::Fill)
+                            .horizontal_alignment(iced::alignment::Horizontal::Center),
                     )
-                    .height(Length::Units(40)),
-            );
+                    .width(Length::Units(100))
+                    .on_press(Message::NextDay),
+                )
+                .height(Length::Units(40)),
+        );
         scroll = scroll.push(col);
         scroll.into()
     }
@@ -167,7 +165,7 @@ impl BatteryChart {
                 .height(Length::Shrink)
                 .push(ChartWidget::new(self).height(Length::Fill)),
         )
-        .height(Length::Units(200))
+        .height(Length::Units(500))
         .into()
     }
 
@@ -229,16 +227,6 @@ impl Chart<Message> for BatteryChart {
                     }),
             )
             .unwrap();
-
-        // chart
-        //     .draw_series(self.db.iter().map(|(k, v)| {
-        //         Circle::new(
-        //             (Local.timestamp(*k, 0), v.0 as i32),
-        //             5,
-        //             if v.1 == "charging" { &BLUE } else { &RED },
-        //         )
-        //     }))
-        //     .unwrap();
     }
 
     fn draw_chart<DB: DrawingBackend>(&self, root: DrawingArea<DB, plotters::coord::Shift>) {
@@ -251,9 +239,6 @@ impl Chart<Message> for BatteryChart {
         size: iced::Size,
         f: F,
     ) -> iced::canvas::Geometry {
-        // let mut frame = iced::canvas::Frame::new(size);
-        // f(&mut frame);
-        // frame.into_geometry()
         self.cache.draw(size, f)
     }
 }

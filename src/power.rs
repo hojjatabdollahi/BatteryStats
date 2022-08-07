@@ -1,7 +1,6 @@
 use std::{collections::HashMap, fs, io::Read};
 
 use chrono::{Local, TimeZone};
-use plotters::prelude::*;
 
 pub fn create_chart() -> Vec<(i64, (f64, String))> {
     let mut db: HashMap<i64, (f64, String)> = HashMap::new();
