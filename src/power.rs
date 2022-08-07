@@ -1,3 +1,4 @@
+use log::{error, info};
 use std::{collections::HashMap, fs, io::Read};
 
 use chrono::{Local, TimeZone};
@@ -16,22 +17,21 @@ pub fn create_chart() -> Vec<(i64, (f64, String))> {
                 .collect::<Vec<&str>>()
                 .iter()
                 .map(|line| {
-                    // println!("line: {}", line);
                     let splitted_line = line.split('\t').collect::<Vec<&str>>();
                     if splitted_line.len() == 3 {
                         let timestamp: i64 = splitted_line[0].parse().unwrap();
                         let percentage: f64 = splitted_line[1].parse().unwrap();
                         db.insert(timestamp, (percentage, splitted_line[2].to_string()));
                     } else {
-                        // eprintln!("not 3: {}", splitted_line.len());
+                        error!("Line is not formatted correctly! \n line: {}", line);
                     }
                 })
                 .for_each(drop);
         })
         .for_each(drop);
 
-    println!(
-        "Hello, world! {}",
+    info!(
+        "Last sample {}",
         Local.timestamp(*db.keys().max().unwrap(), 0)
     );
 
