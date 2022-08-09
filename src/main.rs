@@ -1,4 +1,7 @@
+use std::error::Error;
+
 use chrono::{Date, Local, TimeZone};
+use clap::Parser;
 use iced::{
     canvas::Cache, executor, Application, Button, Column, Command, Container, Element, Length, Row,
     Settings, Space, Text,
@@ -7,7 +10,8 @@ use iced::{
 use plotters::prelude::*;
 use plotters_iced::{Chart, ChartWidget};
 
-use log::{error, info, trace};
+use log::{info, trace};
+use zbus::blocking::Connection;
 
 mod power;
 
@@ -272,15 +276,57 @@ impl Chart<Message> for BatteryChart {
     }
 }
 
-fn main() {
+#[derive(Debug, Parser)]
+#[clap(author, version, about, long_about=None)]
+struct Args {
+    // Use this to just store the latest stats (hourly)
+    #[clap(short, long, value_parser)]
+    no_gui: bool,
+}
+
+// #[dbus_proxy(
+//     interface = "org.freedesktop.UPower.Device",
+//     default_service = "org.freedesktop.UPower",
+//     default_path = "/org/freedesktop/UPower/devices/mouse_hidpp_battery_0"
+// )]
+// trait UPower {
+//     fn GetHistory(
+//         &self,
+//         r#type: &str,
+//         timespan: u32,
+//         resolution: u32,
+//     ) -> zbus::Result<Vec<(u32, f32, u32)>>;
+// }
+
+fn main() -> Result<(), Box<dyn Error>> {
     env_logger::builder()
         .filter(Some("battery"), log::LevelFilter::Trace)
-        // .format_timestamp(None)
         .init();
+
+    let args = Args::parse();
+    if args.no_gui {
+        // let connection = Connection::system()?;
+        // let proxy = UPowerProxyBlocking::new(&connection)?;
+        // let reply = proxy.GetHistory("charge", 0, 100);
+        // info!("{reply:?}");
+
+        let connection = Connection::system()?;
+        let proxy: zbus::blocking::Proxy = zbus::blocking::ProxyBuilder::new_bare(&connection)
+            .path("/org/freedesktop/UPower/devices/mouse_hidpp_battery_0")?
+            .interface("org.freedesktop.UPower.Device")?
+            .destination("org.freedesktop.UPower")?
+            .build()?;
+        let m = proxy.call_method("GetHistory", &("charge", 0u32, 100u32))?;
+        let m: Vec<(u32, f32, u32)> = m.body()?;
+        info!("{m:?}");
+
+        return Ok(());
+    }
 
     BatteryStatApp::run(Settings {
         antialiasing: true,
         ..Settings::default()
     })
     .unwrap();
+    Ok(())
 }
