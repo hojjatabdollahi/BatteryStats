@@ -1,10 +1,5 @@
-use std::{
-    error::Error,
-    fs::File,
-    io::{BufReader, BufWriter, Read},
-};
+use std::error::Error;
 
-use bincode::{deserialize_from, serialize_into};
 use bus::{read_from_file, save_to_file};
 use chrono::{Date, Local, TimeZone};
 use clap::Parser;
@@ -17,8 +12,6 @@ use plotters::prelude::*;
 use plotters_iced::{Chart, ChartWidget};
 
 use log::{info, trace};
-use serde::{Deserialize, Serialize};
-use zbus::{blocking::Connection, dbus_proxy, zvariant::OwnedObjectPath};
 
 mod bus;
 mod power;
@@ -111,14 +104,14 @@ impl BatteryChartComponents {
         match msg {
             Message::NextDay => {
                 trace!("update::next");
-                let newDay = self.battery_chart.next();
+                let _ = self.battery_chart.next();
                 self.should_update = true;
                 // Message::DayChanged(newDay);
                 Command::none()
             }
             Message::PreviousDay => {
                 trace!("update::prev");
-                let newDay = self.battery_chart.prev();
+                let _ = self.battery_chart.prev();
                 self.should_update = true;
                 // Message::DayChanged(newDay);
                 Command::none()
@@ -292,20 +285,6 @@ struct Args {
     no_gui: bool,
 }
 
-// #[dbus_proxy(
-//     interface = "org.freedesktop.UPower.Device",
-//     default_service = "org.freedesktop.UPower",
-//     default_path = "/org/freedesktop/UPower/devices/mouse_hidpp_battery_0"
-// )]
-// trait UPower {
-//     fn GetHistory(
-//         &self,
-//         r#type: &str,
-//         timespan: u32,
-//         resolution: u32,
-//     ) -> zbus::Result<Vec<(u32, f32, u32)>>;
-// }
-
 fn main() -> Result<(), Box<dyn Error>> {
     env_logger::builder()
         .filter(Some("battery"), log::LevelFilter::Trace)
@@ -314,29 +293,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     if args.no_gui {
         save_to_file()?;
         info!("{:?}", read_from_file("data.dat"));
-
-        // info!("{reply:?}");
-
-        // let connection = Connection::system()?;
-        // let proxy: zbus::blocking::Proxy = zbus::blocking::ProxyBuilder::new_bare(&connection)
-        //     .interface("org.freedesktop.UPower")?
-        //     .path("/org/freedesktop/UPower")?
-        //     .destination("org.freedesktop.UPower")?
-        //     .build()?;
-        // let m = proxy.call_method("EnumerateDevices", &())?;
-        // let m: Vec<ObjectPath> = m.body()?;
-        // info!("{m:?}");
-
-        // let connection = Connection::system()?;
-        // let proxy: zbus::blocking::Proxy = zbus::blocking::ProxyBuilder::new_bare(&connection)
-        //     .path("/org/freedesktop/UPower/devices/mouse_hidpp_battery_0")?
-        //     .interface("org.freedesktop.UPower.Device")?
-        //     .destination("org.freedesktop.UPower")?
-        //     .build()?;
-        // let m = proxy.call_method("GetHistory", &("charge", 0u32, 100u32))?;
-        // let m: Vec<(u32, f32, u32)> = m.body()?;
-        // info!("{m:?}");
-
         return Ok(());
     }
 
