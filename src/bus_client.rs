@@ -6,13 +6,17 @@ use std::{
 };
 
 use bincode::serialize_into;
+use byteorder::LE;
+use chrono::Local;
+use glob::glob;
 use log::info;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use zbus::{
     blocking::Connection,
     dbus_proxy,
-    zvariant::{DeserializeDict, ObjectPath, OwnedObjectPath, SerializeDict, Type},
+    zvariant::{
+        DeserializeDict, EncodingContext, ObjectPath, OwnedObjectPath, SerializeDict, Type,
+    },
 };
 
 use crate::model::UPowerProperties;
@@ -38,15 +42,15 @@ pub struct UPowerTest {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct BatHistroy2 {
-    pub properties: UPowerTest,
+pub struct BatHistory {
+    pub properties: UPowerProperties,
     pub data: Vec<(u32, f32, u32)>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct BatHistroy {
-    pub properties: UPowerProperties,
-    pub data: Vec<(u32, f32, u32)>,
+#[derive(Serialize, Deserialize)]
+struct DataLayout {
+    p: Vec<u8>,
+    d: Vec<(u32, f32, u32)>,
 }
 
 pub struct BusClient {
@@ -78,10 +82,11 @@ impl BusClient {
     pub fn save_to_file(&self) -> Result<(), Box<dyn Error>> {
         let proxy = UPowerProxyBlocking::new(&self.connection)?;
         let reply = proxy.enumerate_devices()?;
+
+        let ctx = EncodingContext::<LE>::new_dbus(0);
+
         for object_path in reply {
-            // info!("{:?}", object_path.to_string());
             let props = self.get_device_properties(object_path.as_ref())?;
-            // info!("{props:#?}");
             let proxy: zbus::blocking::Proxy =
                 zbus::blocking::ProxyBuilder::new_bare(&self.connection)
                     .path(object_path)?
@@ -90,41 +95,72 @@ impl BusClient {
                     .build()?;
             let m = proxy.call_method("GetHistory", &("charge", 0u32, 100u32))?;
             let m: Vec<(u32, f32, u32)> = m.body()?;
-
-            // let n = BatHistroy {
+            // let n = BatHistory {
             //     properties: props,
             //     data: m,
             // };
+            // let mut output = BufWriter::new(File::create("data.dat").unwrap());
+            // serialize_into(&mut output, &n).unwrap();
 
-            let n2 = BatHistroy2 {
-                properties: Default::default(),
-                data: m,
+            let datalayout = DataLayout {
+                p: zbus::zvariant::to_bytes(ctx, &props)?,
+                d: m,
             };
 
-            let xx = json!(n2);
-            info!("{xx:#?}");
-            // let encoded: Vec<u8> = bincode::serialize(&n).unwrap();
-            let mut output = BufWriter::new(File::create("data.dat").unwrap());
-            // output.write_all(&encoded).unwrap();
-
-            serialize_into(&mut output, &n2).unwrap();
+            let today = Local::now().to_string();
+            let mut output =
+                BufWriter::new(File::create(format!("{}-{}.dat", today, props.model)).unwrap());
+            serialize_into(&mut output, &datalayout).unwrap();
         }
+
+        // let s2 = S2 {
+        //     f1: "3".to_string(),
+        // };
+        // println!("{s2:#?}");
+        // let s3 = zbus::zvariant::to_bytes(ctx, &s2).unwrap();
+        // println!("{:#?}", s3.len());
+        // let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        // encoder.write(&s3).unwrap();
+        // let s4 = encoder.finish().unwrap();
+        // let s5 = bincode::serialize(&s4).unwrap();
+        // let decode: Vec<u8> = bincode::deserialize(&s5).unwrap();
+        // println!("decode: {:#?}", decode.len());
+        // let mut gz = GzDecoder::new(&decode[..]);
+        // let mut decodeddecoded: Vec<u8> = vec![];
+        // let size = gz.read_to_end(&mut decodeddecoded).unwrap();
+        // println!("size: {}", size);
+        // println!("s3: {}, decodeddecoded: {}", s3.len(), decodeddecoded.len());
+        // let x: S2 = zbus::zvariant::from_slice(&decodeddecoded, ctx).unwrap();
+        // println!("{x:#?}");
+
         // drop(output);
         Ok(())
 
         // let input = BufReader::new(File::open("data.dat").unwrap());
-        // let data: Vec<BatHistroy> = deserialize_from(input).unwrap();
+        // let data: Vec<BatHistory> = deserialize_from(input).unwrap();
     }
 
-    pub fn read_from_file(&self, path: impl AsRef<Path>) -> Result<BatHistroy2, Box<dyn Error>> {
-        let mut input = BufReader::new(File::open(path)?);
-        let mut buf_reader = vec![];
-        let size = input.read_to_end(&mut buf_reader)?;
-        // info!("Read {size:?} bytes");
-        // let data: BatHistroy = bincode::deserialize(&buf_reader)?;
-        let data: BatHistroy2 = bincode::deserialize(&buf_reader)?;
-        // info!("properties:\n{:?}", data.properties);
-        // info!("history:\n{:?}", data.data);
-        Ok(data)
+    pub fn read_from_file(&self, path: impl AsRef<Path>) -> Result<BatHistory, Box<dyn Error>> {
+        let ctx = EncodingContext::<LE>::new_dbus(0);
+        let mut data2 = BatHistory {
+            properties: Default::default(),
+            data: Default::default(),
+        };
+        for f in glob("./*.dat")? {
+            let mut input = BufReader::new(File::open(f.unwrap())?);
+            let mut buf_reader = vec![];
+            let size = input.read_to_end(&mut buf_reader)?;
+            // info!("Read {size:?} bytes");
+            // let data: BatHistory = bincode::deserialize(&buf_reader)?;
+            let data: DataLayout = bincode::deserialize(&buf_reader)?;
+            let xprop: UPowerProperties = zbus::zvariant::from_slice(&data.p, ctx).unwrap();
+            // info!("properties:\n{:?}", data.properties);
+            // info!("history:\n{:?}", data.data);
+            data2 = BatHistory {
+                properties: xprop,
+                data: data.d,
+            };
+        }
+        Ok(data2)
     }
 }

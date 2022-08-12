@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use zbus::zvariant::{DeserializeDict, SerializeDict, Type};
 
-#[derive(Type, DeserializeDict, SerializeDict, PartialEq, Debug)]
+#[derive(Type, Default, DeserializeDict, SerializeDict, PartialEq, Debug)]
 #[zvariant(signature = "dict")]
 pub struct UPowerProperties {
     #[zvariant(rename = "HasHistory")]
