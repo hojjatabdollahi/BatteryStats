@@ -294,7 +294,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     if args.no_gui {
         let bc = BusClient::new()?;
         bc.save_to_file()?;
-        info!("{:?}", bc.read_from_file("data.dat"));
+        info!("{:?}", bc.read_from_file());
         return Ok(());
     }
 

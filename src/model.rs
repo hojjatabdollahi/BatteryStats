@@ -1,4 +1,3 @@
-use serde::{Deserialize, Serialize};
 use zbus::zvariant::{DeserializeDict, SerializeDict, Type};
 
 #[derive(Type, Default, DeserializeDict, SerializeDict, PartialEq, Debug)]
