@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use bus::{read_from_file, save_to_file};
+use bus::{get_device_properties, read_from_file, save_to_file};
 use chrono::{Date, Local, TimeZone};
 use clap::Parser;
 use iced::{
@@ -14,6 +14,7 @@ use plotters_iced::{Chart, ChartWidget};
 use log::{info, trace};
 
 mod bus;
+pub(crate) mod model;
 mod power;
 
 struct BatteryStatApp {
