@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use bus::{get_device_properties, read_from_file, save_to_file};
+use bus_client::BusClient;
 use chrono::{Date, Local, TimeZone};
 use clap::Parser;
 use iced::{
@@ -13,7 +13,7 @@ use plotters_iced::{Chart, ChartWidget};
 
 use log::{info, trace};
 
-mod bus;
+mod bus_client;
 pub(crate) mod model;
 mod power;
 
@@ -292,8 +292,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         .init();
     let args = Args::parse();
     if args.no_gui {
-        save_to_file()?;
-        info!("{:?}", read_from_file("data.dat"));
+        let bc = BusClient::new()?;
+        bc.save_to_file()?;
+        info!("{:?}", bc.read_from_file("data.dat"));
         return Ok(());
     }
 
