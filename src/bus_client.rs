@@ -87,19 +87,24 @@ impl BusClient {
             let props = self.get_device_properties(object_path.as_ref())?;
             let proxy: zbus::blocking::Proxy =
                 zbus::blocking::ProxyBuilder::new_bare(&self.connection)
-                    .path(object_path)?
+                    .path(&object_path)?
                     .interface("org.freedesktop.UPower.Device")?
                     .destination("org.freedesktop.UPower")?
                     .build()?;
-            let m = proxy.call_method("GetHistory", &("charge", 0u32, 100u32))?;
-            let m: Vec<(u32, f32, u32)> = m.body()?;
+            let mut m: Vec<(u32, f32, u32)> = vec![];
+            if props.has_history {
+                let m1 = proxy.call_method("GetHistory", &("charge", 0u32, 100u32))?;
+                m = m1.body()?;
+            }
             let datalayout = DataLayout {
                 p: zbus::zvariant::to_bytes(ctx, &props)?,
                 d: m,
             };
             let today = Local::now().to_string();
-            let mut output =
-                BufWriter::new(File::create(format!("{}-{}.dat", today, props.model)).unwrap());
+            let path_name = object_path.split('/').last().unwrap();
+            let mut output = BufWriter::new(
+                File::create(format!("{}-{}-{}.dat", today, path_name, props.model)).unwrap(),
+            );
             serialize_into(&mut output, &datalayout).unwrap();
         }
         Ok(())
