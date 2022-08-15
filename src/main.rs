@@ -13,9 +13,12 @@ use plotters_iced::{Chart, ChartWidget};
 
 use log::{info, trace};
 
+use crate::upower::UPower;
+
 mod bus_client;
 pub(crate) mod model;
-mod power;
+mod storage;
+mod upower;
 
 struct BatteryStatApp {
     chart: BatteryChartComponents,
@@ -122,7 +125,7 @@ impl BatteryChartComponents {
 
     fn view(&mut self) -> Element<Message> {
         if !self.initialized {
-            self.battery_chart = BatteryChart::new(power::create_chart());
+            self.battery_chart = BatteryChart::new(upower::create_chart());
             self.initialized = true;
         }
 
@@ -292,9 +295,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         .init();
     let args = Args::parse();
     if args.no_gui {
-        let bc = BusClient::new()?;
-        bc.save_to_file()?;
-        info!("{:?}", bc.read_from_file());
+        let up = UPower::init()?;
+        // let bc = BusClient::new()?;
+        // bc.save_to_file()?;
+        // info!("{:?}", bc.read_from_file());
         return Ok(());
     }
 

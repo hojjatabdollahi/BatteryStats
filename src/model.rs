@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use zbus::zvariant::{DeserializeDict, SerializeDict, Type};
 
 #[derive(Type, Default, DeserializeDict, SerializeDict, PartialEq, Debug)]
@@ -61,4 +62,16 @@ pub struct UPowerProperties {
     pub warning_level: u32,
     #[zvariant(rename = "UpdateTime")]
     pub update_time: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct BatHistory {
+    pub properties: UPowerProperties,
+    pub data: Vec<(u32, f32, u32)>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct DataLayout {
+    pub p: Vec<u8>,
+    pub d: Vec<(u32, f32, u32)>,
 }

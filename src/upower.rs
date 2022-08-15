@@ -1,7 +1,36 @@
 use log::{error, info};
-use std::{collections::HashMap, fs, io::Read};
+use std::{collections::HashMap, error::Error, fs, io::Read};
 
 use chrono::{Local, TimeZone};
+
+use crate::{bus_client::BusClient, storage};
+
+pub struct UPower {
+    db: HashMap<String, HashMap<i64, (f64, String)>>,
+}
+
+impl UPower {
+    pub fn init() -> Result<(), Box<dyn Error>> {
+        Self::save()?;
+        Self::load_saved_files();
+        Ok(())
+    }
+
+    fn load_saved_files() {}
+
+    fn save() -> Result<(), Box<dyn Error>> {
+        let bc = BusClient::new()?;
+        for device_path in bc.devices()? {
+            let props = bc.get_device_properties(device_path.as_ref())?;
+            let mut hists = vec![];
+            if props.has_history {
+                hists = bc.get_history(device_path.as_ref())?;
+            }
+            storage::save_to_file(device_path.to_string(), hists, props)?;
+        }
+        Ok(())
+    }
+}
 
 pub fn create_chart() -> Vec<(i64, (f64, String))> {
     let mut db: HashMap<i64, (f64, String)> = HashMap::new();
